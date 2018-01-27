@@ -192,5 +192,6 @@ struct plat_stmmacenet_data {
 	int mac_port_sel_speed;
 	bool en_tx_lpi_clockgating;
 	int has_xgmac;
+	bool force_tx_coe_off;
 };
 #endif
