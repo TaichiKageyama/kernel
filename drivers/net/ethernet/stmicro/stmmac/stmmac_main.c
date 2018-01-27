@@ -4113,7 +4113,9 @@ static int stmmac_hw_init(struct stmmac_priv *priv)
 		priv->hw->pmt = priv->plat->pmt;
 
 		/* TXCOE doesn't work in thresh DMA mode */
-		if (priv->plat->force_thresh_dma_mode)
+		/* TXCOE doesn't work on some SBCs even in SF mode */
+		if (priv->plat->force_thresh_dma_mode ||
+			priv->plat->force_tx_coe_off)
 			priv->plat->tx_coe = 0;
 		else
 			priv->plat->tx_coe = priv->dma_cap.tx_coe;
