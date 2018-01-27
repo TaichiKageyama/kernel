@@ -15,6 +15,7 @@
  */
 #include <linux/phy.h>
 #include <linux/module.h>
+#include <linux/of.h>
 
 #define RTL821x_PHYSR		0x11
 #define RTL821x_PHYSR_DUPLEX	0x2000
@@ -28,6 +29,28 @@
 #define RTL8211F_INER_LINK_STATUS 0x0010
 #define RTL8211F_INSR		0x1d
 #define RTL8211F_TX_DELAY	0x100
+#define RTL8211F_EXT_PAGE_SELECT 0x1f
+#define RTL8211F_LED_EXT_PAGE   0x0d04
+#define RTL8211F_LCR_ADDR       0x0010
+#define RTL8211F_EEELCR_ADDR    0x0011
+
+#define RTL8211F_LCR_LED0_LINK_10       BIT(0)
+#define RTL8211F_LCR_LED0_LINK_100      BIT(1)
+#define RTL8211F_LCR_LED0_LINK_1000     BIT(3)
+#define RTL8211F_LCR_LED0_ACT           BIT(4)
+#define RTL8211F_LCR_LED1_LINK_10       BIT(5)
+#define RTL8211F_LCR_LED1_LINK_100      BIT(6)
+#define RTL8211F_LCR_LED1_LINK_1000     BIT(8)
+#define RTL8211F_LCR_LED1_ACT           BIT(9)
+#define RTL8211F_LCR_LED2_LINK_10       BIT(10)
+#define RTL8211F_LCR_LED2_LINK_100      BIT(11)
+#define RTL8211F_LCR_LED2_LINK_1000     BIT(13)
+#define RTL8211F_LCR_LED2_ACT           BIT(14)
+
+/* Energy Efficient Ethernet */
+#define RTL8211F_LCR_LED0_EEE	BIT(1)
+#define RTL8211F_LCR_LED1_EEE	BIT(2)
+#define RTL8211F_LCR_LED2_EEE	BIT(3)
 
 #define RTL8201F_ISR		0x1e
 #define RTL8201F_IER		0x13
@@ -35,6 +58,76 @@
 MODULE_DESCRIPTION("Realtek PHY driver");
 MODULE_AUTHOR("Johnson Leung");
 MODULE_LICENSE("GPL");
+
+static void rtl8211e_setup_led(struct phy_device *phydev)
+{
+        const char *model;
+        u32 reg_lacr=0;
+        u32 reg_lcr=0;
+
+        model = of_get_property(of_find_node_by_path("/"), "model", NULL);
+        if (strncmp(model, "Rockchip RK3288 Tinker Board", 28) == 0){
+                pr_debug("%s: Set up LED for %s\n", __FUNCTION__, model);
+
+		/* LED0(Gree ACT),LED1(Green Link1000),LED2(Orange:Link100) */
+		reg_lacr= RTL8211E_LACR_LED0_ACT_CTRL;
+		reg_lcr= RTL8211E_LCR_LED0_10 | RTL8211E_LCR_LED0_100 |
+			RTL8211E_LCR_LED0_1000 | RTL8211E_LCR_LED1_1000 |
+			RTL8211E_LCR_LED2_100;
+        }
+
+	if(reg_lacr == 0 && reg_lcr == 0)
+		return;
+
+	/* switch to ext page */
+        phy_write(phydev, RTL8211E_PAGE_SELECT, RTL8211E_EXT_PAGE);
+	/* Switch to ext page 44 */
+	phy_write(phydev, RTL8211E_EXT_PAGE_SELECT, RTL8211E_LED_EXT_PAGE);
+
+	/* set up LED */
+	phy_write(phydev, RTL8211E_LACR_ADDR, reg_lacr);
+	pr_debug("%s: Wrote 0x%x to LACR\n", __FUNCTION__, reg_lacr);
+        phy_write(phydev, RTL8211E_LCR_ADDR, reg_lcr);
+	pr_debug("%s: Wrote 0x%x to LCR\n", __FUNCTION__, reg_lcr);
+        /* switch to Page 0 */
+        phy_write(phydev, RTL8211E_PAGE_SELECT, 0x0000);
+
+        return;
+}
+
+static void rtl8211f_setup_led(struct phy_device *phydev)
+{
+	const char *model;
+	u32 reg_lcr=0;
+	u32 reg_eeelcr=0;
+
+	model = of_get_property(of_find_node_by_path("/"), "model", NULL);
+	if (strncmp(model, "Pine64 Rock64", 13) == 0){
+		pr_debug("%s: Set up LED for %s\n", __FUNCTION__, model);
+
+		/* LED0(N/A), LED1(Green:GreeACT), LED2(Orange:OrangeACT) */
+		reg_lcr = RTL8211F_LCR_LED1_ACT | RTL8211F_LCR_LED1_LINK_1000 |
+			RTL8211F_LCR_LED2_ACT | RTL8211F_LCR_LED2_LINK_100;
+		/* Disable EEE */
+		reg_eeelcr = 0 & ~(RTL8211F_LCR_LED0_EEE |
+			RTL8211F_LCR_LED1_EEE | RTL8211F_LCR_LED2_EEE);
+	}
+
+	if(reg_lcr == 0 && reg_eeelcr == 0)
+		return;
+
+	/* switch to Page 0x0d04 */
+	phy_write(phydev, RTL8211F_EXT_PAGE_SELECT, RTL8211F_LED_EXT_PAGE);
+	/* set up LED */
+	phy_write(phydev, RTL8211F_LCR_ADDR, reg_lcr);
+	pr_debug("%s: Wrote 0x%x to LCR\n", __FUNCTION__, reg_lcr);
+	phy_write(phydev, RTL8211F_EEELCR_ADDR, reg_eeelcr);
+	pr_debug("%s: Wrote 0x%x to EEELCR\n", __FUNCTION__, reg_eeelcr);
+	/* switch to Page 0 */
+	phy_write(phydev, RTL8211F_EXT_PAGE_SELECT, 0x0000);
+
+	return;
+}
 
 static int rtl8201_ack_interrupt(struct phy_device *phydev)
 {
@@ -148,6 +241,9 @@ static int rtl8211f_config_init(struct phy_device *phydev)
 	phy_write(phydev, 0x11, reg);
 	/* restore to default page 0 */
 	phy_write(phydev, RTL821x_PAGE_SELECT, 0x0);
+
+	/* Setup phy LED if needed */
+	rtl8211f_setup_led(phydev);
 
 	return 0;
 }
