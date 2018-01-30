@@ -51,6 +51,16 @@
 		stdout-path = "serial2:1500000n8";
 	};
 
+	leds {
+		compatible = "gpio-leds";
+
+		/* WORKAROUND for no usb power prblem */
+		usb-power-workaround {
+			gpios = <&gpio0 RK_GPIO2 GPIO_ACTIVE_LOW>;
+			default-state = "on";
+		};
+	};
+
 	gmac_clkin: external-gmac-clock {
 		compatible = "fixed-clock";
 		clock-frequency = <125000000>;
