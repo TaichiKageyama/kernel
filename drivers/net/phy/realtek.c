@@ -16,6 +16,7 @@
 #include <linux/phy.h>
 #include <linux/module.h>
 #include <linux/of.h>
+#include <linux/delay.h>
 
 #define RTL821x_PHYSR		0x11
 #define RTL821x_PHYSR_DUPLEX	0x2000
@@ -25,6 +26,26 @@
 #define RTL821x_INSR		0x13
 #define RTL821x_PAGE_SELECT	0x1f
 #define RTL8211E_INER_LINK_STATUS 0x400
+#define RTL8211E_EXT_PAGE_SELECT 0x1e
+#define RTL8211E_PAGE_SELECT 	0x1f
+#define RTL8211E_EXT_PAGE	0x0007
+#define RTL8211E_LED_EXT_PAGE 	0x002c
+#define RTL8211E_LACR_ADDR       0x001a
+#define RTL8211E_LCR_ADDR       0x001c
+
+#define RTL8211E_LACR_LED0_ACT_CTRL BIT(4)
+#define RTL8211E_LACR_LED1_ACT_CTRL BIT(5)
+#define RTL8211E_LACR_LED2_ACT_CTRL BIT(6)
+
+#define RTL8211E_LCR_LED0_10	BIT(0)
+#define RTL8211E_LCR_LED0_100	BIT(1)
+#define RTL8211E_LCR_LED0_1000	BIT(2)
+#define RTL8211E_LCR_LED1_10	BIT(4)
+#define RTL8211E_LCR_LED1_100	BIT(5)
+#define RTL8211E_LCR_LED1_1000	BIT(6)
+#define RTL8211E_LCR_LED2_10	BIT(8)
+#define RTL8211E_LCR_LED2_100	BIT(9)
+#define RTL8211E_LCR_LED2_1000	BIT(10)
 
 #define RTL8211F_INER_LINK_STATUS 0x0010
 #define RTL8211F_INSR		0x1d
@@ -204,6 +225,14 @@ static int rtl8211e_config_intr(struct phy_device *phydev)
 	return err;
 }
 
+static int rtl8211e_config_init(struct phy_device *phydev)
+{
+        /* Setup phy LED if needed */
+        rtl8211e_setup_led(phydev);
+
+        return 0;
+}
+
 static int rtl8211f_config_intr(struct phy_device *phydev)
 {
 	int err;
@@ -298,6 +327,7 @@ static struct phy_driver realtek_drvs[] = {
 		.features	= PHY_GBIT_FEATURES,
 		.flags		= PHY_HAS_INTERRUPT,
 		.config_aneg	= &genphy_config_aneg,
+		.config_init	= &rtl8211e_config_init,
 		.read_status	= &genphy_read_status,
 		.ack_interrupt	= &rtl821x_ack_interrupt,
 		.config_intr	= &rtl8211e_config_intr,
