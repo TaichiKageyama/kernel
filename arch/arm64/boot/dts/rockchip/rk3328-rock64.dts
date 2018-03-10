@@ -314,10 +314,14 @@
 	status = "okay";
 
 	spiflash@0 {
-		compatible = "jedec,spi-nor";
+		compatible = "gigadevice,gd25q128", "jedec,spi-nor";
+		#address-cells = <1>;
+		#size-cells = <1>;
 		reg = <0>;
+		m25p,fast-read;
 
 		/* maximum speed for Rockchip SPI */
+		/* The max SCLK of the flash 104/80 MHZ  */
 		spi-max-frequency = <50000000>;
 	};
 };
