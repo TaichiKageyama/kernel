@@ -54,6 +54,16 @@
 	leds {
 		compatible = "gpio-leds";
 
+		red-led {
+			linux,default-trigger = "none";
+			gpios = <&rk805 RK805_GPIO0 GPIO_ACTIVE_LOW>;
+		};
+
+		white-led {
+			linux,default-trigger = "none";
+			gpios = <&rk805 RK805_GPIO1 GPIO_ACTIVE_LOW>;
+		};
+
 		/* WORKAROUND for no usb power prblem */
 		usb-power-workaround {
 			gpios = <&gpio0 RK_GPIO2 GPIO_ACTIVE_LOW>;
@@ -166,8 +176,13 @@
 		interrupts = <6 IRQ_TYPE_LEVEL_LOW>;
 		#clock-cells = <1>;
 		clock-output-names = "xin32k", "rk805-clkout2";
+
+		/* 2 pins which can be configured as GPIO output only. */
+		gpio-controller;
+		#gpio-cells = <2>;
 		pinctrl-names = "default";
-		pinctrl-0 = <&pmic_int_l>;
+		pinctrl-0 = <&pmic_int_l>, <&rk805_pinctl>;
+
 		rockchip,system-power-controller;
 		wakeup-source;
 
@@ -177,6 +192,12 @@
 		vcc4-supply = <&vcc_sys>;
 		vcc5-supply = <&vcc_io>;
 		vcc6-supply = <&vcc_sys>;
+
+		rk805_pinctl: gpio_pin {
+			pins = "gpio0", "gpio1";
+			function = "gpio";
+			output-high;
+		};
 
 		regulators {
 			vdd_logic: DCDC_REG1 {

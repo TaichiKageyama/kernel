@@ -64,4 +64,7 @@
 #define RK_FUNC_3	3
 #define RK_FUNC_4	4
 
+#define RK805_GPIO0	0
+#define RK805_GPIO1	1
+
 #endif
