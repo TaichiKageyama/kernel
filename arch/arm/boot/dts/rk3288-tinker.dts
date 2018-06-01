@@ -87,19 +87,19 @@
 	gpio-leds {
 		compatible = "gpio-leds";
 
-		act-led {
+		pwr-led {
 			gpios=<&gpio1 RK_PD0 GPIO_ACTIVE_HIGH>;
-			linux,default-trigger="mmc0";
+			linux,default-trigger="default-on";
 		};
 
 		heartbeat-led {
 			gpios=<&gpio1 RK_PD1 GPIO_ACTIVE_HIGH>;
-			linux,default-trigger="heartbeat";
+			linux,default-trigger="none";
 		};
 
-		pwr-led {
+		act-led {
 			gpios = <&gpio0 RK_PA3 GPIO_ACTIVE_HIGH>;
-			linux,default-trigger = "default-on";
+			linux,default-trigger = "none";
 		};
 	};
 
