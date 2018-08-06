@@ -31,6 +31,26 @@
 
 #define RTL821x_PAGE_SELECT			0x1f
 
+#define RTL8211E_EXT_PAGE_SELECT		0x1e
+#define RTL8211E_EXT_PAGE			0x0007
+#define RTL8211E_LED_EXT_PAGE			0x002c
+
+#define RTL8211E_LACR_ADDR			0x001a
+#define RTL8211E_LACR_LED0_ACT_CTRL		BIT(4)
+#define RTL8211E_LACR_LED1_ACT_CTRL		BIT(5)
+#define RTL8211E_LACR_LED2_ACT_CTRL		BIT(6)
+
+#define RTL8211E_LCR_ADDR			0x001c
+#define RTL8211E_LCR_LED0_10			BIT(0)
+#define RTL8211E_LCR_LED0_100			BIT(1)
+#define RTL8211E_LCR_LED0_1000			BIT(2)
+#define RTL8211E_LCR_LED1_10			BIT(4)
+#define RTL8211E_LCR_LED1_100			BIT(5)
+#define RTL8211E_LCR_LED1_1000			BIT(6)
+#define RTL8211E_LCR_LED2_10			BIT(8)
+#define RTL8211E_LCR_LED2_100			BIT(9)
+#define RTL8211E_LCR_LED2_1000			BIT(10)
+
 #define RTL8211F_INSR				0x1d
 
 #define RTL8211F_TX_DELAY			BIT(8)
@@ -71,6 +91,42 @@ static int rtl821x_read_page(struct phy_device *phydev)
 static int rtl821x_write_page(struct phy_device *phydev, int page)
 {
 	return __phy_write(phydev, RTL821x_PAGE_SELECT, page);
+}
+
+static void rtl8211e_setup_led(struct phy_device *phydev)
+{
+	const char *model;
+	u32 reg_lacr = 0;
+	u32 reg_lcr = 0;
+
+	model = of_get_property(of_find_node_by_path("/"), "model", NULL);
+	if (strncmp(model, "Rockchip RK3288 Tinker Board", 28) == 0){
+		pr_debug("%s: Set up LED for %s\n", __FUNCTION__, model);
+
+		/* LED0(Gree ACT),LED1(Green Link1000),LED2(Orange:Link100) */
+		reg_lacr= RTL8211E_LACR_LED0_ACT_CTRL;
+		reg_lcr= RTL8211E_LCR_LED0_10 |
+			RTL8211E_LCR_LED0_100 |
+			RTL8211E_LCR_LED0_1000 |
+			RTL8211E_LCR_LED1_1000 |
+			RTL8211E_LCR_LED2_100;
+	}
+
+	if(reg_lacr == 0 && reg_lcr == 0)
+		return;
+
+	/* Switch to ext page */
+	phy_write(phydev, RTL821x_PAGE_SELECT, RTL8211E_EXT_PAGE);
+	/* Switch to ext page 44 */
+	phy_write(phydev, RTL8211E_EXT_PAGE_SELECT, RTL8211E_LED_EXT_PAGE);
+	/* Set up LED */
+	phy_write(phydev, RTL8211E_LACR_ADDR, reg_lacr);
+	pr_debug("%s: Wrote 0x%x to LACR\n", __FUNCTION__, reg_lacr);
+	phy_write(phydev, RTL8211E_LCR_ADDR, reg_lcr);
+	pr_debug("%s: Wrote 0x%x to LCR\n", __FUNCTION__, reg_lcr);
+	/* Switch to Page 0 */
+
+	return;
 }
 
 static void rtl8211f_setup_led(struct phy_device *phydev)
@@ -174,6 +230,14 @@ static int rtl8211e_config_intr(struct phy_device *phydev)
 	return err;
 }
 
+static int rtl8211e_config_init(struct phy_device *phydev)
+{
+	/* Setup phy LED if needed */
+	rtl8211e_setup_led(phydev);
+
+	return 0;
+}
+
 static int rtl8211f_config_intr(struct phy_device *phydev)
 {
 	u16 val;
@@ -267,6 +331,7 @@ static struct phy_driver realtek_drvs[] = {
 		.phy_id_mask	= 0x001fffff,
 		.features	= PHY_GBIT_FEATURES,
 		.flags		= PHY_HAS_INTERRUPT,
+		.config_init    = &rtl8211e_config_init,
 		.ack_interrupt	= &rtl821x_ack_interrupt,
 		.config_intr	= &rtl8211e_config_intr,
 		.suspend	= genphy_suspend,
