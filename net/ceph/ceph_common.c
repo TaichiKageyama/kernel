@@ -616,11 +616,7 @@ struct ceph_client *ceph_create_client(struct ceph_options *opt, void *private)
 {
 	struct ceph_client *client;
 	struct ceph_entity_addr *myaddr = NULL;
-	int err;
-
-	err = wait_for_random_bytes();
-	if (err < 0)
-		return ERR_PTR(err);
+	int err = -ENOMEM;
 
 	client = kzalloc(sizeof(*client), GFP_KERNEL);
 	if (client == NULL)
