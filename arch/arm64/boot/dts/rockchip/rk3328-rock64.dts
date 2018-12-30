@@ -61,6 +61,8 @@
 		regulator-name = "vcc_host_5v";
 		regulator-always-on;
 		regulator-boot-on;
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
 		vin-supply = <&vcc_sys>;
 	};
 
@@ -72,6 +74,8 @@
 		regulator-name = "vcc_host1_5v";
 		regulator-always-on;
 		regulator-boot-on;
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
 		vin-supply = <&vcc_sys>;
 	};
 
